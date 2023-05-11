@@ -2,6 +2,8 @@ import telebot
 import os
 import shutil
 from telebot.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove
+import json
+from random import shuffle
 
 def token():
     return "5103709864:AAF1XqfUBGIKAzmT0IEeQOMBSg7Ic6FFDjU"
@@ -9,18 +11,23 @@ def token():
 bot = telebot.TeleBot(token())
 
 
-@bot.message_handler(commands=["createdeck"])
-def create_deck(message):
+@bot.message_handler(commands=["adddeck"])
+def add_deck(message):
     bot.send_message(message.chat.id, "type the name of the deck")
-    bot.register_next_step_handler(message, create_deck2)
+    bot.register_next_step_handler(message, add_deck2)
 
 
-def create_deck2(message):
-    if not "decks" in os.listdir("/"):
+def add_deck2(message):
+    deck = message.text
+    if not "decks" in os.listdir("./"):
+        print(os.listdir("./"))
         os.mkdir("decks")
     try:
-        os.mkdir(f"decks/{message.text}")
-        bot.send_message(message.chat.id, f"created a deck")
+        os.mkdir(f"decks/{deck}")
+        empty = []
+        with open(f"decks/{deck}/statistics.json", "w") as f:
+            f.write(json.dumps(empty))
+        bot.send_message(message.chat.id, f"added a deck")
     except:
         bot.send_message(message.chat.id, "something went wrong")
 
@@ -40,11 +47,13 @@ def delete_deck(message):
 
 
 def delete_deck2(message):
+    deck = message.text
     try:
-        if message.text == "cancel":
+        if deck == "cancel":
             bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
+            return
         else:
-            shutil.rmtree(f"decks/{message.text}")
+            shutil.rmtree(f"decks/{deck}")
             bot.send_message(message.chat.id, "deleted a deck", reply_markup=ReplyKeyboardRemove())
     except:
         bot.send_message(message.chat.id, "something went wrong", reply_markup=ReplyKeyboardRemove())
@@ -57,7 +66,15 @@ def add_image(message):
 
 def add_image2(message):
     deck = message.text
-    bot.send_message(message.chat.id, "send image", reply_markup=ReplyKeyboardRemove())
+    if deck == "cancel":
+        bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
+        return
+    elif deck not in os.listdir("decks"):
+        bot.send_message(message.chat.id, "there is no such deck", reply_markup=ReplyKeyboardRemove())
+        return
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("cancel"))
+    bot.send_message(message.chat.id, "send image", reply_markup=markup)
     bot.register_next_step_handler(message, add_image3, deck)
 
 
@@ -69,6 +86,9 @@ def add_image3(message, deck):
         bot.send_message(message.chat.id, "choose name")
         bot.register_next_step_handler(message, add_image4, deck, image_file)
     else:
+        if message.text == "cancel":
+            bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
+            return
         bot.send_message(message.chat.id, "wrong type")
 
 
@@ -77,9 +97,186 @@ def add_image4(message, deck, image_file):
     try:
         with open(f"decks/{deck}/{name}.jpg", "wb") as f:
             f.write(image_file)
-        bot.send_message(message.chat.id, "added an image")
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(KeyboardButton("cancel"))
+        bot.send_message(message.chat.id, "added an image, add another image to the deck?", reply_markup=markup)
+        bot.register_next_step_handler(message, add_image3, deck)
+
     except:
         bot.send_message(message.chat.id, "something went wrong")
+
+
+@bot.message_handler(commands=["deleteimage"])
+def delete_image(message):
+    abstract_choose_deck(message, delete_image2)
+
+
+def delete_image2(message):
+    deck = message.text
+    if deck == "cancel":
+        bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
+        return
+    try:
+        images = os.listdir(f"decks/{deck}")
+        images.remove("statistics.json")
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        for image in images:
+            markup.add(KeyboardButton(image[:image.index('.')]))
+        markup.add(KeyboardButton("cancel"))
+        bot.send_message(message.chat.id, "choose the image", reply_markup=markup)
+        bot.register_next_step_handler(message, delete_image3, deck)
+    except:
+        bot.send_message(message.chat.id, "there is no such deck", reply_markup=ReplyKeyboardRemove())
+
+
+def delete_image3(message, deck):
+    image = message.text
+    if image == "cancel":
+        bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
+        return
+    try:
+        os.remove(f"decks/{deck}/{image}")
+        bot.send_message(message.chat.id, "deleted an image", reply_markup=ReplyKeyboardRemove())
+    except:
+        bot.send_message(message.chat.id, "wrong name of image", reply_markup=ReplyKeyboardRemove())
+
+
+@bot.message_handler(commands=["getimage"])
+def get_image(message):
+    abstract_choose_deck(message, get_image2)
+
+
+def get_image2(message):
+    deck = message.text
+    if deck == "cancel":
+        bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
+        return
+    try:
+        images = os.listdir(f"decks/{deck}")
+        images.remove("statistics.json")
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        for image in images:
+            markup.add(KeyboardButton(image[:image.index('.')]))
+        markup.add(KeyboardButton("cancel"))
+        bot.send_message(message.chat.id, "choose the image", reply_markup=markup)
+        bot.register_next_step_handler(message, get_image3, deck)
+    except:
+        bot.send_message(message.chat.id, "wrong name of image", reply_markup=ReplyKeyboardRemove())
+
+
+def get_image3(message, deck):
+    image = message.text
+    try:
+        for file in os.listdir(f"decks/{deck}"):
+            if file.startswith(image):
+                image = file
+                break
+        with open(f"decks/{deck}/{image}", "rb") as file:
+            bot.send_photo(message.chat.id, file, f"{image[:image.index('.')]}", reply_markup=ReplyKeyboardRemove())
+    except:
+        bot.send_message(message.chat.id, "wrong name of image", reply_markup=ReplyKeyboardRemove())
+
+
+@bot.message_handler(commands=["train"])
+def train(message):
+    abstract_choose_deck(message, train2)
+
+
+def train2(message):
+    deck = message.text
+    if deck == "cancel":
+        bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
+        return
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("from text"))
+    markup.add(KeyboardButton("from image"))
+    markup.add(KeyboardButton("cancel"))
+    bot.send_message(message.chat.id, "choose type", reply_markup=markup)
+    bot.register_next_step_handler(message, train3, deck)
+
+
+def train3(message, deck):
+    typ = message.text
+    if typ == "cancel":
+        bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
+        return
+    if typ not in ["from text", "from image"]:
+        bot.send_message(message.chat.id, "wrong type", reply_markup=ReplyKeyboardRemove())
+        return
+    mas = os.listdir(f"decks/{deck}")
+    mas.remove("statistics.json")
+    shuffle(mas)
+    if typ == "from text":
+        train_text(message, deck, mas)
+    else:
+        train_image(message, deck, mas)
+
+
+def train_text(message, deck, mas):
+    if not mas:
+        bot.send_message(message.chat.id, "there is nothing to train", reply_markup=ReplyKeyboardRemove())
+        return
+    image = mas.pop()
+    params = {"image": image,
+              "deck": deck,
+              "mas": mas,
+              "correct": 0,
+              "total": len(os.listdir(f"decks/{deck}"))-1}
+    with open(f"decks/{deck}/{image}", "rb") as file:
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(KeyboardButton("view"))
+        bot.send_photo(message.chat.id, file, reply_markup=markup, caption=f"{len(mas)} left")
+        bot.register_next_step_handler(message, view_text, params)
+
+
+def view_text(message, params):
+    bot.send_message(message.chat.id, params["image"][:params["image"].index('.')], reply_markup=ReplyKeyboardRemove())
+    markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    markup.add(KeyboardButton("Yes"), KeyboardButton("No"))
+    markup.add(KeyboardButton("cancel"))
+    bot.send_message(message.chat.id, "your answer was correct?", reply_markup=markup)
+    bot.register_next_step_handler(message, train_text2, params)
+
+
+def train_text2(message, params):
+    ans = message.text
+    if ans == "cancel":
+        bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
+        return
+    if ans not in ["Yes", "No"]:
+        bot.send_message(message.chat.id, "wrong input", reply_markup=ReplyKeyboardRemove())
+        return
+    if ans == "Yes":
+        params["correct"] += 1
+        bot.send_message(message.chat.id, "good!", reply_markup=ReplyKeyboardRemove())
+    else:
+        bot.send_message(message.chat.id, "bad!", reply_markup=ReplyKeyboardRemove())
+    if not params["mas"]:
+        with open("decks/{}/{}".format(params["deck"], "statistics.json"), "r") as f:
+            data = json.load(f)
+            if data:
+                bot.send_message(message.chat.id, "Your previous scores: {}".format(' '.join(data)), reply_markup=ReplyKeyboardRemove())
+            score = str(round(params["correct"] / params["total"] * 100)) + "%"
+            bot.send_message(message.chat.id, "Your score: {}".format(score), reply_markup=ReplyKeyboardRemove())
+            data.append(score)
+            if len(data) > 10:
+                data = data[1:]
+        with open("decks/{}/{}".format(params["deck"], "statistics.json"), "w") as f:
+            f.write(json.dumps(data))
+        return
+    params["image"] = params["mas"].pop()
+    with open("decks/{}/{}".format(params["deck"], params["image"]), "rb") as file:
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(KeyboardButton("view"))
+        left = len(params["mas"])
+        bot.send_photo(message.chat.id, file, reply_markup=markup, caption=f"{left} left")
+        bot.register_next_step_handler(message, view_text, params)
+    
+
+
+def train_image(message, deck, mas):
+    pass
+
 
 
 bot.infinity_polling()
