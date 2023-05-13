@@ -206,31 +206,37 @@ def train3(message, deck):
     mas = os.listdir(f"decks/{deck}")
     mas.remove("statistics.json")
     shuffle(mas)
-    if typ == "from text":
-        train_text(message, deck, mas)
-    else:
-        train_image(message, deck, mas)
+    train_text(message, deck, mas, typ)
 
 
-def train_text(message, deck, mas):
+def train_text(message, deck, mas, typ):
     if not mas:
         bot.send_message(message.chat.id, "there is nothing to train", reply_markup=ReplyKeyboardRemove())
         return
     image = mas.pop()
     params = {"image": image,
               "deck": deck,
+              "typ": typ,
               "mas": mas,
               "correct": 0,
               "total": len(os.listdir(f"decks/{deck}"))-1}
-    with open(f"decks/{deck}/{image}", "rb") as file:
-        markup = ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(KeyboardButton("view"))
-        bot.send_photo(message.chat.id, file, reply_markup=markup, caption=f"{len(mas)} left")
-        bot.register_next_step_handler(message, view_text, params)
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("view"))
+    if params["typ"] == "from image":
+        with open(f"decks/{deck}/{image}", "rb") as file:
+            bot.send_photo(message.chat.id, file, reply_markup=markup, caption=f"{len(mas)} left")
+    else:
+        bot.send_message(message.chat.id, image[:image.index('.')] + " " + f"({len(mas)} left)", reply_markup=markup)
+    bot.register_next_step_handler(message, view_text, params)
 
 
 def view_text(message, params):
-    bot.send_message(message.chat.id, params["image"][:params["image"].index('.')], reply_markup=ReplyKeyboardRemove())
+    if params["typ"] == "from image":
+        bot.send_message(message.chat.id, params["image"][:params["image"].index('.')], reply_markup=ReplyKeyboardRemove())
+    else:
+        deck, image = params["deck"], params["image"]
+        with open(f"decks/{deck}/{image}", "rb") as file:
+            bot.send_photo(message.chat.id, file, reply_markup=ReplyKeyboardRemove())
     markup = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     markup.add(KeyboardButton("Yes"), KeyboardButton("No"))
     markup.add(KeyboardButton("cancel"))
