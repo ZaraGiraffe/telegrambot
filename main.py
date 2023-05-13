@@ -83,7 +83,7 @@ def add_image3(message, deck):
         imageID = message.photo[-1].file_id
         image_info = bot.get_file(imageID)
         image_file = bot.download_file(image_info.file_path)
-        bot.send_message(message.chat.id, "choose name")
+        bot.send_message(message.chat.id, "choose name", reply_markup=ReplyKeyboardRemove())
         bot.register_next_step_handler(message, add_image4, deck, image_file)
     else:
         if message.text == "cancel":
