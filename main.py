@@ -13,12 +13,16 @@ bot = telebot.TeleBot(token())
 
 @bot.message_handler(commands=["adddeck"])
 def add_deck(message):
-    bot.send_message(message.chat.id, "type the name of the deck")
+    markup = markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("cancel"))
+    bot.send_message(message.chat.id, "type the name of the deck", reply_markup=markup)
     bot.register_next_step_handler(message, add_deck2)
 
 
 def add_deck2(message):
     deck = message.text
+    if deck == "cancel":
+        bot.send_message(message.chat.id, f"ok", reply_markup=ReplyKeyboardRemove())
     if not "decks" in os.listdir("./"):
         print(os.listdir("./"))
         os.mkdir("decks")
@@ -27,9 +31,9 @@ def add_deck2(message):
         empty = []
         with open(f"decks/{deck}/statistics.json", "w") as f:
             f.write(json.dumps(empty))
-        bot.send_message(message.chat.id, f"added a deck")
+        bot.send_message(message.chat.id, f"added a deck", reply_markup=ReplyKeyboardRemove())
     except:
-        bot.send_message(message.chat.id, "something went wrong")
+        bot.send_message(message.chat.id, "something went wrong", reply_markup=ReplyKeyboardRemove())
 
 
 def abstract_choose_deck(message, next_func):
