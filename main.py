@@ -23,6 +23,7 @@ def add_deck2(message):
     deck = message.text
     if deck == "cancel":
         bot.send_message(message.chat.id, f"ok", reply_markup=ReplyKeyboardRemove())
+        return
     if not "decks" in os.listdir("./"):
         print(os.listdir("./"))
         os.mkdir("decks")
