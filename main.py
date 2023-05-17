@@ -140,7 +140,7 @@ def delete_image3(message, deck):
         bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
         return
     try:
-        os.remove(f"decks/{deck}/{image}")
+        os.remove(f"decks/{deck}/{image}.jpg")
         bot.send_message(message.chat.id, "deleted an image", reply_markup=ReplyKeyboardRemove())
     except:
         bot.send_message(message.chat.id, "wrong name of image", reply_markup=ReplyKeyboardRemove())
