@@ -283,7 +283,7 @@ def train5(message, params):
         with open("decks/{}/{}".format(params["deck"], params["image"]), "rb") as file:
             bot.send_photo(message.chat.id, file, reply_markup=markup, caption=f"{left} left")
     else:
-        bot.send_message(message.chat.id, params["image"][:params["image"].index('.')] + f" ({left} left)", reply_markup=ReplyKeyboardRemove())
+        bot.send_message(message.chat.id, params["image"][:params["image"].index('.')] + f" ({left} left)", reply_markup=markup)
     bot.register_next_step_handler(message, view, params)
     
 
