@@ -211,10 +211,10 @@ def train3(message, deck):
     mas = os.listdir(f"decks/{deck}")
     mas.remove("statistics.json")
     shuffle(mas)
-    train_text(message, deck, mas, typ)
+    train4(message, deck, mas, typ)
 
 
-def train_text(message, deck, mas, typ):
+def train4(message, deck, mas, typ):
     if not mas:
         bot.send_message(message.chat.id, "there is nothing to train", reply_markup=ReplyKeyboardRemove())
         return
@@ -231,11 +231,11 @@ def train_text(message, deck, mas, typ):
         with open(f"decks/{deck}/{image}", "rb") as file:
             bot.send_photo(message.chat.id, file, reply_markup=markup, caption=f"{len(mas)} left")
     else:
-        bot.send_message(message.chat.id, image[:image.index('.')] + " " + f"({len(mas)} left)", reply_markup=markup)
-    bot.register_next_step_handler(message, view_text, params)
+        bot.send_message(message.chat.id, image[:image.index('.')] + f" ({len(mas)} left)", reply_markup=markup)
+    bot.register_next_step_handler(message, view, params)
 
 
-def view_text(message, params):
+def view(message, params):
     if params["typ"] == "from image":
         bot.send_message(message.chat.id, params["image"][:params["image"].index('.')], reply_markup=ReplyKeyboardRemove())
     else:
@@ -246,10 +246,10 @@ def view_text(message, params):
     markup.add(KeyboardButton("Yes"), KeyboardButton("No"))
     markup.add(KeyboardButton("cancel"))
     bot.send_message(message.chat.id, "your answer was correct?", reply_markup=markup)
-    bot.register_next_step_handler(message, train_text2, params)
+    bot.register_next_step_handler(message, train5, params)
 
 
-def train_text2(message, params):
+def train5(message, params):
     ans = message.text
     if ans == "cancel":
         bot.send_message(message.chat.id, "ok", reply_markup=ReplyKeyboardRemove())
@@ -276,18 +276,15 @@ def train_text2(message, params):
             f.write(json.dumps(data))
         return
     params["image"] = params["mas"].pop()
-    with open("decks/{}/{}".format(params["deck"], params["image"]), "rb") as file:
-        markup = ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(KeyboardButton("view"))
-        left = len(params["mas"])
-        bot.send_photo(message.chat.id, file, reply_markup=markup, caption=f"{left} left")
-        bot.register_next_step_handler(message, view_text, params)
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton("view"))
+    left = len(params["mas"])
+    if params["typ"] == "from image":
+        with open("decks/{}/{}".format(params["deck"], params["image"]), "rb") as file:
+            bot.send_photo(message.chat.id, file, reply_markup=markup, caption=f"{left} left")
+    else:
+        bot.send_message(message.chat.id, params["image"][:params["image"].index('.')] + f" ({left} left)", reply_markup=ReplyKeyboardRemove())
+    bot.register_next_step_handler(message, view, params)
     
-
-
-def train_image(message, deck, mas):
-    pass
-
-
 
 bot.infinity_polling()
